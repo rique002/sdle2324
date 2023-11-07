@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shopping Lists</title>
+</head>
+<body>
+    <h1>Shopping Lists</h1>
+    <ul>
+        {% for shopping_list in shopping_lists %}
+            <li><a href="/shopping_list/{{ shopping_list.id }}">{{ shopping_list.name }}</a></li>
+        {% endfor %}
+    </ul>
+    <h2>Create a New Shopping List</h2>
+    <form method="POST">
+        {{ create_form.hidden_tag() }}
+        <div>
+            {{ create_form.name.label }}: {{ create_form.name(placeholder="Enter the list name") }}
+        </div>
+        <div>
+            <button type="submit">Create List</button>
+        </div>
+    </form>
+</body>
+</html>
