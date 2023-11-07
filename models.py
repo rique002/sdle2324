@@ -13,5 +13,3 @@ class ShoppingItem(db.Model):
     quantity = db.Column(db.Integer)
     price = db.Column(db.Float)
     shopping_list_id = db.Column(db.Integer, db.ForeignKey('shopping_list.id'))
-
-
