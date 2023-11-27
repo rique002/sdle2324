@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Shopping Lists</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <h1>Shopping Lists</h1>
@@ -17,7 +18,7 @@
             {{ create_form.name.label }}: {{ create_form.name(placeholder="Enter the list name") }}
         </div>
         <div>
-            <button type="submit">Create List</button>
+            <button class="change" type="submit">Create List</button>
         </div>
     </form>
 </body>

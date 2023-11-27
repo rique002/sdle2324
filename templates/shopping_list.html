@@ -2,13 +2,86 @@
 <html>
 <head>
     <title>Shopping List</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        function incrementQuantity(itemId) {
+            var quantityElement = document.getElementById('quantity_' + itemId);
+            var currentQuantity = parseInt(quantityElement.innerText);
+
+            // Make an AJAX POST request to increment quantity
+            fetch('/increment_quantity/' + itemId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ quantity: currentQuantity + 1 }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                quantityElement.innerText = data.newQuantity; // Update quantity on success
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function decrementQuantity(itemId) {
+            var quantityElement = document.getElementById('quantity_' + itemId);
+            var currentQuantity = parseInt(quantityElement.innerText);
+
+            if (currentQuantity > 0) {
+                // Make an AJAX POST request to decrement quantity
+                fetch('/decrement_quantity/' + itemId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ quantity: currentQuantity - 1 }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    quantityElement.innerText = data.newQuantity; // Update quantity on success
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+        }
+        function removeItem(itemId) {
+            // Make an AJAX POST request to remove the item
+            fetch('/remove_item/' + itemId, {
+                method: 'POST',
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Remove the item's HTML element from the DOM on success
+                    var itemElement = document.getElementById('quantity_' + itemId).parentElement;
+                    itemElement.remove();
+                } else {
+                    console.error('Error:', response.statusText);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+
+    </script>
 </head>
 <body>
     <a href="{{ url_for('index') }}"><button>Back to Index</button></a>
     <h1>Shopping List: {{ shopping_list.name }}</h1>
     <ul>
         {% for item in shopping_list.items %}
-            <li>{{ item.name }} - Quantity: {{ item.quantity }} - Price: ${{ item.price }}</li>
+            <li>
+                <button class="remove" type="button" onclick="removeItem({{ item.id }})">X</button>
+                {{ item.name }} - Quantity: 
+                <span id="quantity_{{ item.id }}">{{ item.quantity }}</span>
+                <button class="change" onclick="incrementQuantity({{ item.id }})">+</button>
+                <button class="change" onclick="decrementQuantity({{ item.id }})">-</button>
+
+            </li>
         {% endfor %}
     </ul>
     <h2>Add Item to Shopping List</h2>
@@ -21,14 +94,11 @@
             {{ form.quantity.label }}: {{ form.quantity(placeholder="Enter quantity") }}
         </div>
         <div>
-            {{ form.price.label }}: {{ form.price(placeholder="Enter price") }}
-        </div>
-        <div>
-            <button type="submit">Add Item</button>
+            <button class="change"  type="submit">Add Item</button>
         </div>
     </form>
     <form method="POST" action="/clear_list/{{ shopping_list.id }}">
-        <button type="submit">Clear List</button>
+        <button class="remove" type="submit">Clear List</button>
     </form>
 </body>
 </html>

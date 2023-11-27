@@ -4,7 +4,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField, FloatField
 from wtforms.validators import DataRequired
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
 app.config['SECRET_KEY'] = 'your-secret-key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///shopping_list.db'
 
@@ -13,7 +13,6 @@ db.init_app(app)
 class AddItemForm(FlaskForm):
     name = StringField('Item Name', validators=[DataRequired()])
     quantity = IntegerField('Quantity', validators=[DataRequired()])
-    price = FloatField('Price', validators=[DataRequired()])
 
 class CreateShoppingListForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired()])
@@ -44,7 +43,6 @@ def show_shopping_list(id):
         item = ShoppingItem(
             name=form.name.data,
             quantity=form.quantity.data,
-            price=form.price.data,
             shopping_list_id=id
         )
 
@@ -67,28 +65,32 @@ def clear_list(id):
 
     return redirect(url_for('show_shopping_list', id=id))
 
-""" 
 
-
-@app.route('/clear_list/<int:list_id>')
-def clear_list(list_id):
-    shopping_list = ShoppingList.query.get(list_id)
-    if shopping_list:
-        ShoppingItem.query.filter_by(shopping_list_id=list_id).delete()
+@app.route('/increment_quantity/<int:item_id>', methods=['POST'])
+def increment_quantity(item_id):
+    item = ShoppingItem.query.get(item_id)
+    if item:
+        new_quantity = item.quantity + 1
+        item.quantity = new_quantity
         db.session.commit()
-    return redirect(url_for('index'))
+        return jsonify({'newQuantity': new_quantity}), 200
+    return jsonify({'error': 'Item not found'}), 404
 
-@app.route('/api/shopping-lists', methods=['POST'])
-def create_shopping_list():
-    data = request.get_json()
-    name = data.get('name')
-    new_shopping_list = ShoppingList(name=name)
-    db.session.add(new_shopping_list)
-    db.session.commit()
-    return jsonify({"message": "Shopping list created successfully"})
+@app.route('/decrement_quantity/<int:item_id>', methods=['POST'])
+def decrement_quantity(item_id):
+    item = ShoppingItem.query.get(item_id)
+    if item and item.quantity > 0:
+        new_quantity = item.quantity - 1
+        item.quantity = new_quantity
+        db.session.commit()
+        return jsonify({'newQuantity': new_quantity}), 200
+    return jsonify({'error': 'Item not found or quantity cannot be negative'}), 400
 
-@app.route('/api/shopping-lists', methods=['GET'])
-def get_shopping_lists():
-    shopping_lists = ShoppingList.query.all()
-    response_data = [{"id": shopping_list.id, "name": shopping_list.name} for shopping_list in shopping_lists]
-    return jsonify(response_data) """
+@app.route('/remove_item/<int:item_id>', methods=['POST'])
+def remove_item(item_id):
+    item = ShoppingItem.query.get(item_id)
+    if item:
+        db.session.delete(item)
+        db.session.commit()
+        return 'Item removed successfully', 200
+    return 'Item not found', 404

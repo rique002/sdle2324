@@ -10,18 +10,18 @@ def create_and_populate_database():
 
     # Shopping List 1
     shopping_list1 = ShoppingList(name="Groceries")
-    item1 = ShoppingItem(name="Apples", quantity=5, price=2.99)
-    item2 = ShoppingItem(name="Bananas", quantity=10, price=1.99)
+    item1 = ShoppingItem(name="Apples", quantity=5)
+    item2 = ShoppingItem(name="Bananas", quantity=10)
 
     # Shopping List 2
     shopping_list2 = ShoppingList(name="Electronics")
-    item3 = ShoppingItem(name="Laptop", quantity=1, price=999.99)
-    item4 = ShoppingItem(name="Smartphone", quantity=2, price=499.99)
+    item3 = ShoppingItem(name="Laptop", quantity=1)
+    item4 = ShoppingItem(name="Smartphone", quantity=2)
 
     # Shopping List 3
     shopping_list3 = ShoppingList(name="Clothing")
-    item5 = ShoppingItem(name="T-Shirts", quantity=5, price=12.99)
-    item6 = ShoppingItem(name="Jeans", quantity=3, price=24.99)
+    item5 = ShoppingItem(name="T-Shirts", quantity=5)
+    item6 = ShoppingItem(name="Jeans", quantity=3)
 
     # Add items to shopping lists
     shopping_list1.items.extend([item1, item2])
