@@ -52,10 +52,11 @@ def decrement_quantity():
 @app.route('/remove_item', methods=['DELETE'])
 def remove_item():
     data = request.json
+    print(data)
     item_id = data['item_id']
     shopping_list_id = data['shopping_list_id']
     server = consistent_hashing.get_server(shopping_list_id)
-    response = requests.post(f"{server}/remove_item/{item_id}")
+    response = requests.delete(f"{server}/remove_item/{item_id}")
     return response.content, response.status_code
 
 # class Proxy:
@@ -141,4 +142,4 @@ if __name__ == "__main__":
     # proxy_port = 8888
     # proxy = Proxy(proxy_port)
     # proxy.run()
-    app.run(host="127.0.0.1", port=4000, threaded=True)
+    app.run(  "127.0.0.1", port=4000, threaded=True)

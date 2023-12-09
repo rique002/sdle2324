@@ -61,6 +61,8 @@ def show_shopping_list(id):
 
         db.session.add(item)
         db.session.commit()
+        return redirect(url_for('show_shopping_list', id=id))
+
 
     return render_template('shopping_list.html', shopping_list=shopping_list, form=form)
 
@@ -126,6 +128,7 @@ def send_signal_after_insert_item(mapper, connection, target):
 
 def send_signal_after_delete_item(mapper, connection, target):
     response = requests.delete('http://127.0.0.1:4000/remove_item', json={'shopping_list_id': target.shopping_list_id, 'item_id': target.id})
+    print(response)
     if response.status_code == 204:
         print("Item deleted successfully")
     else:

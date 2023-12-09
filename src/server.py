@@ -29,6 +29,7 @@ def create_list():
 @app.route('/list/<list_id>', methods=['GET'])
 def get_list(list_id):
     shopping_list = ShoppingList.query.get(list_id)
+    shopping_list = db.session.get(ShoppingList, list_id)
     if shopping_list is None:
         return "List not found", 404
     return jsonify({'id': shopping_list.id, 'name': shopping_list.name, 'items': shopping_list.items})
@@ -46,7 +47,7 @@ def create_item():
 
 @app.route('/increment_item/<string:item_id>', methods=['PUT'])
 def increment_quantity(item_id):
-    item = ShoppingItem.query.get(item_id)
+    item = db.session.get(ShoppingItem, item_id)
     if item:
         new_quantity = item.quantity + 1
         item.quantity = new_quantity
@@ -57,7 +58,7 @@ def increment_quantity(item_id):
 
 @app.route('/decrement_item/<string:item_id>', methods=['PUT'])
 def decrement_quantity(item_id):
-    item = ShoppingItem.query.get(item_id)
+    item = db.session.get(ShoppingItem, item_id)
     if item and item.quantity > 0:
         new_quantity = item.quantity - 1
         item.quantity = new_quantity
@@ -68,7 +69,8 @@ def decrement_quantity(item_id):
 
 @app.route('/remove_item/<string:item_id>', methods=['DELETE'])
 def remove_item(item_id):
-    item = ShoppingItem.query.get(item_id)
+    item = db.session.get(ShoppingItem, item_id)
+    print(item)
     if item:
         db.session.delete(item)
         db.session.commit()
