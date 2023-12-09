@@ -1,11 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
+from apscheduler.schedulers.background import BackgroundScheduler
 import requests
 from sqlalchemy import event
 from models import db, ShoppingList, ShoppingItem
 from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, FloatField
+from wtforms import StringField, IntegerField
 from wtforms.validators import DataRequired
-import socket
 import uuid
 
 app = Flask(__name__, static_url_path='/static')
@@ -113,40 +113,98 @@ def remove_item(item_id):
 # event.listen(ShoppingItem, 'after_delete', send_signal)
 
 def send_signal_after_insert_list(mapper, connection, target):
-    response = requests.post('http://127.0.0.1:4000/list', json={'id': target.id, 'name': target.name, 'items': [{'id': item.id, 'name': item.name, 'quantity': item.quantity} for item in target.items]})
-    if response.status_code == 201:
-        print("List created successfully")
-    else:
-        print("Failed to create list, you might be offline")
+    try :
+        response = requests.post('http://127.0.0.1:4000/list', json={'id': target.id, 'name': target.name, 'items': [{'id': item.id, 'name': item.name, 'quantity': item.quantity} for item in target.items]})
+        if response.status_code == 201:
+            print("List created successfully")
+        else:
+            print("Failed to create list")
+    except:
+        print("Not able to connect the server")
         
 def send_signal_after_insert_item(mapper, connection, target):
-    response = requests.post('http://127.0.0.1:4000/item', json={'id': target.id, 'name': target.name, 'quantity': target.quantity, 'shopping_list_id': target.shopping_list_id})
-    if response.status_code == 201:
-        print("Item created successfully")
-    else:
-        print("Failed to create item, you might be offline")
+    try :
+        response = requests.post('http://127.0.0.1:4000/item', json={'id': target.id, 'name': target.name, 'quantity': target.quantity, 'shopping_list_id': target.shopping_list_id})
+        if response.status_code == 201:
+            print("Item created successfully")
+        else:
+            print("Failed to create item")
+    except:
+        print("Not able to connect the server")
 
 def send_signal_after_delete_item(mapper, connection, target):
-    response = requests.delete('http://127.0.0.1:4000/remove_item', json={'shopping_list_id': target.shopping_list_id, 'item_id': target.id})
-    print(response)
-    if response.status_code == 204:
-        print("Item deleted successfully")
-    else:
-        print("Failed to delete item, you might be offline")
+    try:
+        response = requests.delete('http://127.0.0.1:4000/remove_item', json={'shopping_list_id': target.shopping_list_id, 'item_id': target.id})
+        print(response)
+        if response.status_code == 204:
+            print("Item deleted successfully")
+        else:
+            print("Failed to delete item")
+    except:
+        print("Not able to connect the server")       
 
 def send_signal_after_update_item(mapper, connection, target):
     if(last_change < 0):
-        response = requests.put('http://127.0.0.1:4000/decrement_item', json={'shopping_list_id': target.shopping_list_id, 'item_id': target.id})
-    else:
-        response = requests.put('http://127.0.0.1:4000/increment_item', json={'shopping_list_id': target.shopping_list_id, 'item_id': target.id})
-
-        
-    if response.status_code == 204:
-        print("Item updated successfully")
-    else:
-        print("Failed to add item, you might be offline")
+        try:
+            response = requests.put('http://127.0.0.1:4000/decrement_item', json={'shopping_list_id': target.shopping_list_id, 'item_id': target.id})
+            if response.status_code == 204:
+                print("Item decremented successfully")
+            else:
+                print("Failed to decrement item")
+        except:
+            print("Not able to connect the server")        
     
-event.listen(ShoppingList, 'after_insert', send_signal_after_insert_list)
+    else:
+        try:
+            response = requests.put('http://127.0.0.1:4000/increment_item', json={'shopping_list_id': target.shopping_list_id, 'item_id': target.id})
+            if response.status_code == 204:
+                print("Item incremented successfully")
+            else:
+                print("Failed to increment item")
+        except:
+            print("Not able to connect the server")        
+            
+
+list_buffer = []
+item_buffer = []
+
+def collect_lists(mapper, connection, target):
+    list_buffer.append(target)
+
+def collect_items(mapper, connection, target):
+    item_buffer.append(target)
+
+def send_changes():
+    for change in list_buffer:
+        try :
+            response = requests.post('http://127.0.0.1:4000/list', json={'id': change.id, 'name': change.name, 'items': []})
+            if response.status_code == 201:
+                print("List created successfully")
+            else:
+                print("Failed to create list")
+            list_buffer.remove(change)
+        except:
+            print("Not able to connect the server")
+
+    for change in item_buffer:
+        try :
+            response = requests.post('http://127.0.0.1:4000/item', json={'id': change.id, 'name': change.name, 'quantity': change.quantity, 'shopping_list_id': change.shopping_list_id})
+            if response.status_code == 201:
+                print("Item created successfully")
+            else:
+                print("Failed to create item")
+        except:
+            print("Not able to connect the server")
+
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(send_changes, 'interval', seconds=5)
+scheduler.start()
+
+db.event.listen(ShoppingList, 'after_insert', collect_lists)
+db.event.listen(ShoppingItem, 'after_insert', collect_items)
+        
+# event.listen(ShoppingList, 'after_insert', send_signal_after_insert_list)
 event.listen(ShoppingItem, 'after_insert', send_signal_after_insert_item)
 event.listen(ShoppingItem, 'after_delete', send_signal_after_delete_item)
 event.listen(ShoppingItem, 'after_update', send_signal_after_update_item)
