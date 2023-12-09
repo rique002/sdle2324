@@ -1,12 +1,31 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from apscheduler.schedulers.background import BackgroundScheduler
 import requests
-from sqlalchemy import event
 from models import db, ShoppingList, ShoppingItem
 from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField
 from wtforms.validators import DataRequired
+from crdts import AWORMap
 import uuid
+
+class ShoppingListCRDT:
+    def __init__(self, id, name, items: AWORMap):
+        self.id = id
+        self.replica_id = 0
+        self.name = name
+        self.items = items
+    
+    def add_item(self, item):
+        self.items.add(self.replica_id, item.id, item.quantity)
+
+    def remove_item(self, item):
+        self.items.rem(self.replica_id, item.id)
+
+    def merge(self, other):
+        if(self.replica_id == other.replica_id):
+            self.items.merge(other.items)
+            self.replica_id = max(self.replica_id, other.replica_id) + 1
+
 
 app = Flask(__name__, static_url_path='/static')
 app.config['SECRET_KEY'] = 'your-secret-key'
@@ -175,26 +194,40 @@ def collect_items(mapper, connection, target):
     item_buffer.append(target)
 
 def send_changes():
-    for change in list_buffer:
-        try :
+    while list_buffer:
+        change = None
+        try:
+            change = list_buffer.pop()
             response = requests.post('http://127.0.0.1:4000/list', json={'id': change.id, 'name': change.name, 'items': []})
-            if response.status_code == 201:
-                print("List created successfully")
+            if response.status_code != 201:
+                print(f"Failed to create list '{change.name}'")
+                list_buffer.append(change)
+                break
             else:
-                print("Failed to create list")
-            list_buffer.remove(change)
+                print(f"List '{change.name}' created successfully")
         except:
-            print("Not able to connect the server")
+            if change is not None:
+                list_buffer.append(change)
+            print("Not able to connect to the server")
+            break
 
-    for change in item_buffer:
-        try :
+    while item_buffer:
+        change = None
+        try:
+            change = item_buffer.pop()
+            print(change.id, change.name, change.quantity, change.shopping_list_id)
             response = requests.post('http://127.0.0.1:4000/item', json={'id': change.id, 'name': change.name, 'quantity': change.quantity, 'shopping_list_id': change.shopping_list_id})
-            if response.status_code == 201:
-                print("Item created successfully")
+            if response.status_code != 201:
+                print(f"Failed to create item {change.name}")
+                item_buffer.append(change)
+                break
             else:
-                print("Failed to create item")
+                print(f"Item {change.name} created successfully")
         except:
-            print("Not able to connect the server")
+            if change is not None:
+                item_buffer.append(change)
+            print("Not able to connect to the server")
+            break
 
 
 scheduler = BackgroundScheduler()
@@ -205,11 +238,6 @@ db.event.listen(ShoppingList, 'after_insert', collect_lists)
 db.event.listen(ShoppingItem, 'after_insert', collect_items)
         
 # event.listen(ShoppingList, 'after_insert', send_signal_after_insert_list)
-event.listen(ShoppingItem, 'after_insert', send_signal_after_insert_item)
-event.listen(ShoppingItem, 'after_delete', send_signal_after_delete_item)
-event.listen(ShoppingItem, 'after_update', send_signal_after_update_item)
-
-
-
-
-
+# event.listen(ShoppingItem, 'after_insert', send_signal_after_insert_item)
+# event.listen(ShoppingItem, 'after_delete', send_signal_after_delete_item)
+# event.listen(ShoppingItem, 'after_update', send_signal_after_update_item)
