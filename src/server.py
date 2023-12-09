@@ -1,9 +1,11 @@
 # import socket
 # import threading
 # import sqlite3
-import sys
 from flask import Flask, request, jsonify
 from models import db, ShoppingList, ShoppingItem
+from apscheduler.schedulers.background import BackgroundScheduler
+import sys
+from crdts import AWORMap, ShoppingListCRDT
 
 server_id = sys.argv[1] if len(sys.argv) > 1 else 0
 
@@ -12,18 +14,31 @@ app.config['SECRET_KEY'] = 'your-secret-key'
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///shopping_list{server_id}.db'
 db.init_app(app)
 
+local_shopping_lists_crdts = {}
 
 @app.route('/list', methods=['POST'])
 def create_list():
     list_data = request.json
     print(list_data)
-    shopping_list = ShoppingList(id=list_data['id'], name=list_data['name'])
-    for item_data in list_data['items']:
-        item = ShoppingItem(id=item_data['id'], name=item_data['name'], quantity=item_data['quantity'], shopping_list_id=shopping_list.id)
-        db.session.add(item)
-    db.session.add(shopping_list)
-    db.session.commit()
-    return "List created successfully", 201
+    
+    try:
+        new_list_crdt = ShoppingListCRDT(list_data['id'], list_data['name'], AWORMap(), list_data['replica_id'])
+        for item in list_data['items']:
+            new_list_crdt.add_item(item['id'], item['name'], item['quantity'])
+
+        existing_list_crdt = local_shopping_lists_crdts.get(list_data['id'])
+        
+        if existing_list_crdt:
+            new_list_crdt.merge(existing_list_crdt)
+
+        local_shopping_lists_crdts[list_data['id']] = new_list_crdt
+
+
+        return "List updated successfully", 201
+
+    except Exception as e:
+        print(e)
+        return "List not created", 400
 
 
 @app.route('/list/<list_id>', methods=['GET'])
@@ -77,60 +92,45 @@ def remove_item(item_id):
         return 'Item removed successfully', 204
     return 'Item not found', 404
 
-# class Server:
-#     def __init__(self, server_id):
-#         self.server_id = server_id
-#         self.server_port = 1000
-#         self.conn = sqlite3.connect("shopping_list"+str(server_id)+".db")  
-#         self.cursor = self.conn.cursor() 
-#         # Create a table for the shopping lists
-#         self.cursor.execute("""
-#             CREATE TABLE IF NOT EXISTS shopping_list (
-#                 id INTEGER PRIMARY KEY,
-#                 name TEXT NOT NULL
-#             )
-#         """)
-#         self.conn.commit()  
+def save_local_shopping_lists():
+    with app.app_context():
+        try:
+            for shopping_list_crdt in local_shopping_lists_crdts.values():
+                shopping_list = ShoppingList.query.get(shopping_list_crdt.id)
+                if shopping_list is not None:
+                    existing_list_crdt = ShoppingListCRDT(shopping_list.id, shopping_list.name, AWORMap(), shopping_list.replica_id)
+                    for item in shopping_list.items:
+                        existing_list_crdt.add_item(item.id, item.name, item.quantity)
+                    shopping_list_crdt.merge(existing_list_crdt)
+
+                    shopping_list.replica_id = shopping_list_crdt.replica_id
+
+                    for item_id in shopping_list_crdt.items.value():
+                        existing_item = ShoppingItem.query.get(item_id)
+                        if existing_item is None:
+                            new_item = ShoppingItem(id=item_id, name=shopping_list_crdt.item_names[item_id], quantity=shopping_list_crdt.items.value()[item_id], shopping_list_id=shopping_list_crdt.id)
+                            db.session.add(new_item)
+                        else:
+                            existing_item.quantity = shopping_list_crdt.items.value()[item_id]
+                else:
+                    shopping_list = ShoppingList(id=shopping_list_crdt.id, name=shopping_list_crdt.name, replica_id=shopping_list_crdt.replica_id)
+                    db.session.add(shopping_list)
+                    for item_id in shopping_list_crdt.items.value():
+                        new_item = ShoppingItem(id=item_id, name=shopping_list_crdt.item_names[item_id], quantity=shopping_list_crdt.items.value()[item_id], shopping_list_id=shopping_list_crdt.id)
+                        db.session.add(new_item)
+
+                db.session.commit()
+            
+            print("Local shopping lists saved successfully")
+        except Exception as e:
+            print(e)
+            print("Local shopping lists not saved")
 
 
-#     def run(self):
-#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as proxy_socket:
-#             proxy_socket.connect(('127.0.0.1', 8888))
-#             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-#                 while True:
-#                     try:
-#                         server_socket.bind(('127.0.0.1', self.server_port))
-#                         break
-#                     except OSError:
-#                         self.server_port += 1
-#                 server_socket.listen()
-#                 proxy_socket.send(f"{self.server_id},{self.server_port}".encode('utf-8'))
+scheduler = BackgroundScheduler()
+scheduler.add_job(save_local_shopping_lists, 'interval', seconds=8)
+scheduler.start()
 
-#                 print(f"Server {self.server_id} listening on port {self.server_port}")
-
-#                 while True:
-#                     conn, addr = server_socket.accept()
-#                     threading.Thread(target=self.handle_connection, args=(conn,)).start()
-
-#     def handle_connection(self, conn):
-#         num = conn.recv(1024).decode('utf-8')
-#         print(f"Received number {num} on server {self.server_id}")
-#         conn_thread = sqlite3.connect("shopping_list" + str(self.server_id) + ".db")
-#         cursor_thread = conn_thread.cursor()
-
-#         cursor_thread.execute("INSERT INTO shopping_list (name) VALUES (?)", (num,))
-#         conn_thread.commit()  # Commit the changes
-
-#         with open(f"server_{self.server_id}_output.txt", 'a') as file:
-#             file.write(f"{num}\n")
-#             file.flush()
-
-#         # Close the connection and cursor for this thread
-#         cursor_thread.close()
-#         conn_thread.close()
-
-#     def __del__(self):
-#         self.conn.close()
 
 if __name__ == "__main__":
     #server_id = int(input("Enter server ID: "))

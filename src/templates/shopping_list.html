@@ -81,15 +81,16 @@
 </head>
 <body>
     <a href="{{ url_for('index') }}"><button>Back to Index</button></a>
-    <h1>Shopping List: {{ shopping_list.name }}</h1>
+    <h1>Shopping List: {{ shopping_list.name }}</h1> 
     <ul>
-        {% for item in shopping_list.items %}
+        
+        {% for item_id, value in shopping_list['items'].items() %}
             <li>
-                <button class="remove" type="button" onclick="removeItem('{{ item.id }}')">X</button>
-                {{ item.name }} - Quantity: 
-                <span id="quantity_{{ item.id }}">{{ item.quantity }}</span>
-                <button class="change" onclick="incrementQuantity('{{ item.id }}')">+</button>
-                <button class="change" onclick="decrementQuantity('{{ item.id }}')">-</button>
+                <button class="remove" type="button" onclick="removeItem('{{ item_id }}')">X</button>
+                {{ shopping_list.item_names[item_id] }} - Quantity: 
+                <span id="quantity_{{ item_id }}">{{ value }}</span>
+                <button class="change" onclick="incrementQuantity('{{ item_id }}')">+</button>
+                <button class="change" onclick="decrementQuantity('{{ item_id }}')">-</button>
 
             </li>
         {% endfor %}

@@ -137,7 +137,6 @@ def remove_item():
 #             server_conn.send(num.encode('utf-8'))
 #             print(f"Sent number {num} to server {server_id}")
 
-
 if __name__ == "__main__":
     # proxy_port = 8888
     # proxy = Proxy(proxy_port)

@@ -4,6 +4,7 @@ db = SQLAlchemy()
 
 class ShoppingList(db.Model):
     id = db.Column(db.String, primary_key=True)
+    replica_id = db.Column(db.Integer, default=0)
     name = db.Column(db.String(100))
     items = db.relationship('ShoppingItem', backref='shopping_list', lazy=True)
 

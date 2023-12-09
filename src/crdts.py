@@ -148,47 +148,73 @@ class AWORMap(Generic[K, V]):
                 entries[key] = other.entries[key]
 
         self.entries = entries
+
+class ShoppingListCRDT:
+    def __init__(self, id, name, items: AWORMap, replica_id = 0):
+        self.id = id
+        self.replica_id = replica_id
+        self.name = name
+        self.items = items
+        self.item_names = dict()
     
+    def add_item(self, item_id, item_name, item_quantity):
+        self.items.add(self.replica_id, item_id, item_quantity)
+        if(item_name != None):
+            self.item_names[item_id] = item_name
 
-# Test set remove in same set
-set1 = AWORSet()
-set1.add("a", "a")
-set1.add("a", "b")
-set1.rem("b", "a")
-set1.add("b", "c")
-assert set1.value() == {"b", "c"}
+    def remove_item(self, item_id):
+        self.items.rem(self.replica_id, item_id)
 
-# Test set merging after a remove
-set1 = AWORSet()
-set1.add("a", "a")
-set1.add("a", "b")
+    def merge(self, other):
+        if(self.replica_id == other.replica_id):
+            self.items.merge(other.items)
+            self.replica_id = max(self.replica_id, other.replica_id) + 1
+            self.item_names.update(other.item_names)
 
-set2 = set1
-set2.add("b", "c")
-set2.rem("b", "a")
+# # Test set remove in same set
+# set1 = AWORSet()
+# set1.add("a", "a")
+# set1.add("a", "b")
+# set1.rem("b", "a")
+# set1.add("b", "c")
+# assert set1.value() == {"b", "c"}
 
-set1.merge(set2)
-assert set1.value() == {"b", "c"}
+# # Test set merging after a remove
+# set1 = AWORSet()
+# set1.add("a", "a")
+# set1.add("a", "b")
 
-# Test map remove in same map
-map0 = AWORMap()
-map0.add(0, "key1", 1)
-map0.add(0, "key2", 2)
-map0.add(0, "key3", 3)
-print(map0.value())
+# set2 = set1
+# set2.add("b", "c")
+# set2.rem("b", "a")
 
-mapA = deepcopy(map0)
-mapB = deepcopy(map0)
+# set1.merge(set2)
+# assert set1.value() == {"b", "c"}
 
-mapA.add(1, "key4", 4)
-mapA.add(1, "key1", 4)
-mapA.rem(1, "key3")
-print(mapA.value())
+# # Test map remove in same map
+# map0 = AWORMap()
+# map0.add(0, "key1", 1)
+# map0.add(0, "key2", 2)
+# map0.add(0, "key3", 3)
+# print(map0.value())
 
-mapB.add(1, "key1", 1)
-mapB.add(1, "key3", 3)
-mapB.rem(1, "key2")
-print(mapB.value())
+# mapA = deepcopy(map0)
+# mapB = deepcopy(map0)
 
-mapA.merge(mapB)
-print(mapA.value())
+# mapA.add(1, "key4", 4)
+# mapA.add(1, "key1", 4)
+# mapA.rem(1, "key3")
+# print(mapA.value())
+
+# mapB.add(1, "key1", 1)
+# mapB.add(1, "key3", 3)
+# mapB.rem(1, "key2")
+# print(mapB.value())
+
+
+
+# mapA.merge(mapB)
+# print(mapA.value())
+
+# for key in mapA.value():
+#     print(key)
