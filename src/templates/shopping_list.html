@@ -5,52 +5,62 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
     <script>
         function incrementQuantity(itemId) {
-            var quantityElement = document.getElementById('quantity_' + itemId);
-            var currentQuantity = parseInt(quantityElement.innerText);
+        var quantityElement = document.getElementById('quantity_' + itemId);
+        var currentQuantity = parseInt(quantityElement.innerText);
 
-            // Make an AJAX POST request to increment quantity
-            fetch('/increment_quantity/' + itemId, {
-                method: 'POST',
+        // Make an AJAX POST request to increment quantity
+        fetch('/update_item', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ item_id: itemId, update_num: 1 }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                quantityElement.innerText = data.newQuantity; // Update quantity on success
+            } else {
+                console.error('Error:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    function decrementQuantity(itemId) {
+        var quantityElement = document.getElementById('quantity_' + itemId);
+        var currentQuantity = parseInt(quantityElement.innerText);
+
+        if (currentQuantity > 0) {
+            // Make an AJAX POST request to decrement quantity
+            fetch('/update_item', {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ quantity: currentQuantity + 1 }),
+                body: JSON.stringify({ item_id: itemId, update_num: -1 }),
             })
             .then(response => response.json())
             .then(data => {
-                quantityElement.innerText = data.newQuantity; // Update quantity on success
+                if (data.success) {
+                    quantityElement.innerText = data.newQuantity; // Update quantity on success
+                } else {
+                    console.log(data);
+                    console.error('Error:', data.message);
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
             });
         }
+    }
 
-        function decrementQuantity(itemId) {
-            var quantityElement = document.getElementById('quantity_' + itemId);
-            var currentQuantity = parseInt(quantityElement.innerText);
-
-            if (currentQuantity > 0) {
-                // Make an AJAX POST request to decrement quantity
-                fetch('/decrement_quantity/' + itemId, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ quantity: currentQuantity - 1 }),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    quantityElement.innerText = data.newQuantity; // Update quantity on success
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-            }
-        }
         function removeItem(itemId) {
             // Make an AJAX POST request to remove the item
             fetch('/remove_item/' + itemId, {
-                method: 'POST',
+                method: 'DELETE',
             })
             .then(response => {
                 if (response.ok) {
@@ -75,11 +85,11 @@
     <ul>
         {% for item in shopping_list.items %}
             <li>
-                <button class="remove" type="button" onclick="removeItem({{ item.id }})">X</button>
+                <button class="remove" type="button" onclick="removeItem('{{ item.id }}')">X</button>
                 {{ item.name }} - Quantity: 
                 <span id="quantity_{{ item.id }}">{{ item.quantity }}</span>
-                <button class="change" onclick="incrementQuantity({{ item.id }})">+</button>
-                <button class="change" onclick="decrementQuantity({{ item.id }})">-</button>
+                <button class="change" onclick="incrementQuantity('{{ item.id }}')">+</button>
+                <button class="change" onclick="decrementQuantity('{{ item.id }}')">-</button>
 
             </li>
         {% endfor %}
