@@ -29,7 +29,16 @@ def create_list():
         existing_list_crdt = local_shopping_lists_crdts.get(list_data['id'])
         
         if existing_list_crdt:
-            new_list_crdt.merge(existing_list_crdt)
+            print("EXISTING LIST")    
+            print(existing_list_crdt.items.value())
+            print("NEW LIST")    
+            print(new_list_crdt.items.value())
+            existing_list_crdt.merge(new_list_crdt)
+            print("MERGED LIST")    
+            print(existing_list_crdt.items.value())
+    
+            new_list_crdt = existing_list_crdt
+            new_list_crdt.replica_id += 1
 
         local_shopping_lists_crdts[list_data['id']] = new_list_crdt
 
@@ -41,13 +50,19 @@ def create_list():
         return "List not created", 400
 
 
-@app.route('/list/<list_id>', methods=['GET'])
+@app.route('/list/<string:list_id>', methods=['GET'])
 def get_list(list_id):
-    shopping_list = ShoppingList.query.get(list_id)
-    shopping_list = db.session.get(ShoppingList, list_id)
+    print(local_shopping_lists_crdts)
+    shopping_list = local_shopping_lists_crdts.get(list_id)
+    
     if shopping_list is None:
         return "List not found", 404
-    return jsonify({'id': shopping_list.id, 'name': shopping_list.name, 'items': shopping_list.items})
+    
+    items = []
+    for item_id in shopping_list.items.value():
+        items.append({'id': item_id, 'name': shopping_list.item_names[item_id], 'quantity': shopping_list.items.value()[item_id]})
+    
+    return jsonify({'id': shopping_list.id, 'replica_id': shopping_list.replica_id, 'name': shopping_list.name, 'items': items})
 
 
 @app.route('/item', methods=['POST'])

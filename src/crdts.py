@@ -168,7 +168,7 @@ class ShoppingListCRDT:
     def merge(self, other):
         if(self.replica_id == other.replica_id):
             self.items.merge(other.items)
-            self.replica_id = max(self.replica_id, other.replica_id) + 1
+            self.replica_id = max(self.replica_id, other.replica_id)
             self.item_names.update(other.item_names)
 
 # # Test set remove in same set
@@ -191,30 +191,33 @@ class ShoppingListCRDT:
 # set1.merge(set2)
 # assert set1.value() == {"b", "c"}
 
-# # Test map remove in same map
-# map0 = AWORMap()
-# map0.add(0, "key1", 1)
-# map0.add(0, "key2", 2)
-# map0.add(0, "key3", 3)
-# print(map0.value())
+# Test map remove in same map
+map0 = AWORMap()
+map0.add(0, "key1", 1)
+map0.add(0, "key2", 2)
+map0.add(0, "key3", 3)
+print(map0.value())
 
-# mapA = deepcopy(map0)
-# mapB = deepcopy(map0)
-
-# mapA.add(1, "key4", 4)
-# mapA.add(1, "key1", 4)
-# mapA.rem(1, "key3")
-# print(mapA.value())
-
-# mapB.add(1, "key1", 1)
-# mapB.add(1, "key3", 3)
-# mapB.rem(1, "key2")
-# print(mapB.value())
+mapA = deepcopy(map0)
+mapB = deepcopy(map0)
 
 
+mapA.add(1, "key4", 4)
+mapA.add(1, "key1", 4)
+print("MAP A")
+print(mapA.value())
 
-# mapA.merge(mapB)
-# print(mapA.value())
+mapB.add(1, "key1", 1)
+print("MAP B")
+print(mapB.value())
 
-# for key in mapA.value():
-#     print(key)
+mapC = deepcopy(mapB)
+mapC.rem(2, "key3")
+print("MAP C")
+print(mapC.value())
+mapA.merge(mapC)
+print("MAP A MERGED")
+print(mapA.value())
+
+for key in mapA.value():
+    print(key)

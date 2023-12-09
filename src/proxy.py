@@ -15,7 +15,7 @@ def create_list():
     return response.content, response.status_code
 
 
-@app.route('/list/<list_id>', methods=['GET'])
+@app.route('/list/<string:list_id>', methods=['GET'])
 def join_list(list_id):
     server = consistent_hashing.get_server(list_id)
     return redirect(f"{server}/list/{list_id}")
