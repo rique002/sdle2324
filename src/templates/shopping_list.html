@@ -112,7 +112,7 @@
     </form>
     <button onclick="fetch('/save', {method: 'POST'})">Save</button>
     <button onclick="fetch('/push', {method: 'POST'})">Push</button>
-    <button onclick="fetch('/pull', {method: 'POST'})">Pull</button>
+    <button onclick="fetch('/pull', {method: 'POST'}).then(() => location.reload())">Pull</button>
     <form method="POST" action="/clear_list/{{ shopping_list.id }}">
         <button class="remove" type="submit">Clear List</button>
     </form>

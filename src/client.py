@@ -13,7 +13,7 @@ client_id = sys.argv[1] if len(sys.argv) > 1 else 0
 
 app = Flask(__name__, static_url_path='/static')
 app.config['SECRET_KEY'] = 'your-secret-key'
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///shopping_list{client_id}.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///shopping_list_client{client_id}.db'
 
 db.init_app(app)
 
@@ -49,14 +49,12 @@ def show_shopping_list(id):
                 current_shopping_list = ShoppingListCRDT(server_shopping_list['id'], server_shopping_list['name'], AWORMap(), server_shopping_list['replica_id'])
                 for item in server_shopping_list['items']:
                     current_shopping_list.add_item(item['id'], item['name'], item['quantity'])
-                current_shopping_list.replica_id += 1 
             else:
                 return 'List not found', 404
         else: 
             current_shopping_list = ShoppingListCRDT(shopping_list.id, shopping_list.name, AWORMap(), shopping_list.replica_id)
             for item in shopping_list.items:
                 current_shopping_list.add_item(item.id, item.name, item.quantity)
-            current_shopping_list.replica_id += 1
 
     form = AddItemForm()
 
@@ -131,36 +129,32 @@ def push():
                 print("Failed to update list")
         except:
             print("Not able to connect the server")
-    print(current_shopping_list.items.value())
 
 def pull():
     global current_shopping_list
     if current_shopping_list is not None:
         try:
             server_shopping_list = requests.get(f'http://127.0.0.1:4000/list/{current_shopping_list.id}').json()
-            print("RECEIVED LIST: "+str(server_shopping_list['replica_id']))
-            print(server_shopping_list['items'])
-            print("CURRENT LIST: "+str(current_shopping_list.replica_id))
-            print(current_shopping_list.items.value())
+      #      print("RECEIVED LIST: "+str(server_shopping_list['replica_id']))
+       #     print(server_shopping_list['items'])
+      #      print("CURRENT LIST: "+str(current_shopping_list.replica_id))
+      #      print(current_shopping_list.items.value())
 
             if server_shopping_list is not None:
                 shopping_list = ShoppingListCRDT(server_shopping_list['id'], server_shopping_list['name'], AWORMap(), server_shopping_list['replica_id'])
                 for item in server_shopping_list['items']:
                     shopping_list.add_item(item['id'], item['name'], item['quantity'])
-                print("SHOPPING LIST: "+str(shopping_list.replica_id))
-                print(shopping_list.items.value())
-                shopping_list.merge(current_shopping_list)
-                current_shopping_list = shopping_list
-                print("MERGED LIST: "+str(current_shopping_list.replica_id))
-                print(current_shopping_list.items.value())
-                current_shopping_list.replica_id += 1
+          #      print("SHOPPING LIST: "+str(shopping_list.replica_id))
+         #       print(shopping_list.items.value())
+                current_shopping_list.merge(shopping_list)
+         #       print("MERGED LIST: "+str(current_shopping_list.replica_id))
+          #      print(current_shopping_list.items.value())
                 print("List updated successfully")
             else:
                 print("Server does not contain the list")
         except Exception as e:
             print(e)
             print("Not able to connect the server")
-    print(current_shopping_list.items.value())
             
 def save():
     if current_shopping_list is not None:
@@ -195,8 +189,7 @@ def save():
             except Exception as e:
                 print(e)
                 print("Failed to save list")
-    print(current_shopping_list.items.value())
-        
+
 
 def create_and_populate_database():
     # Drop all existing tables to clear the database

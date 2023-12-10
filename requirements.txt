@@ -2,3 +2,6 @@ flask
 flask_sqlalchemy
 flask_wtf
 apscheduler
+requests
+wtforms
+uuid
